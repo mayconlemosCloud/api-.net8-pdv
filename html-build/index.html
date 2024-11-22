@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de PDV - Versão 1.0.4</title>
+    <!-- Importando Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+</head>
+
+<body class="bg-gray-100 flex flex-col min-h-screen">
+
+    <header class="bg-gray-800 text-white py-4 text-center">
+        <nav>
+            <ul class="flex justify-center gap-4">
+                <li><a href="javascript:void(0)" onclick="mostrarPedidos()" class="hover:underline">Pedidos</a></li>
+                <li><a href="javascript:void(0)" onclick="mostrarProdutos()" class="hover:underline">Gerenciar
+                        Produtos</a></li>
+
+                <li><a href="javascript:void(0)" onclick="mostrarCarrinho()" class="hover:underline">Carrinho</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="container mx-auto p-5 flex-grow">
+
+        <!-- Carrinho -->
+        <div id="carrinho" class="hidden">
+            <h2 class="text-2xl font-semibold mb-4">Carrinho de Compras</h2>
+            <label for="produto-id-nome" class="block">Digite o nome ou ID do produto:</label>
+            <input type="text" id="produto-id-nome" placeholder="Nome ou ID do produto..."
+                oninput="pesquisarProduto(event)" onkeydown="verificarEnter(event)"
+                class="w-full p-2 border border-gray-300 rounded mb-2">
+            <button onclick="adicionarProdutoCarrinho()"
+                class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded mb-4">Adicionar ao Carrinho</button>
+
+            <table class="w-full border-collapse mt-4">
+                <thead>
+                    <tr class="bg-gray-200">
+                        <th class="p-2 text-left">Produto</th>
+                        <th class="p-2 text-left">Quantidade</th>
+                        <th class="p-2 text-left">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-carrinho">
+                    <!-- Itens do carrinho vão aqui -->
+                </tbody>
+            </table>
+            <p class="mt-4"><strong>Total: </strong>R$ <span id="total">0.00</span></p>
+            <button onclick="finalizarVenda()"
+                class="bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded mt-4">Finalizar Venda</button>
+        </div>
+
+        <!-- Pedidos -->
+        <div id="pedidos">
+            <h2 class="text-2xl font-semibold mb-4">Pedidos</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" id="tabela-pedidos">
+                <!-- Os pedidos aparecerão aqui dinamicamente -->
+            </div>
+        </div>
+
+        <!-- Gerenciar Produtos -->
+        <div id="produtos" class="hidden">
+            <h2 class="text-2xl font-semibold mb-4">Gerenciar Produtos</h2>
+            <div class="mb-4">
+                <label for="produto-nome" class="block">Nome do Produto:</label>
+                <input type="text" id="produto-nome" placeholder="Nome do produto..."
+                    class="w-full p-2 border border-gray-300 rounded mb-2">
+                <label for="produto-preco" class="block">Preço do Produto:</label>
+                <input type="number" id="produto-preco" placeholder="Preço do produto..."
+                    class="w-full p-2 border border-gray-300 rounded mb-2">
+                <button onclick="adicionarProduto()"
+                    class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded">Adicionar Produto</button>
+            </div>
+
+            <h3 class="text-xl font-semibold mb-2">Produtos Cadastrados</h3>
+            <table class="w-full border-collapse mt-4">
+                <thead>
+                    <tr class="bg-gray-200">
+                        <th class="p-2 text-left">ID</th>
+                        <th class="p-2 text-left">Nome</th>
+                        <th class="p-2 text-left">Preço</th>
+                        <th class="p-2 text-left">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-produtos">
+                    <!-- Produtos vão aqui -->
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <!-- Modal Finalizar Venda -->
+    <div id="modal-finalizar" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center">
+        <div class="bg-white p-8 rounded-lg text-center">
+            <h2 class="text-xl font-semibold mb-4">Forma de Pagamento</h2>
+            <select id="pagamento" class="w-full p-2 border border-gray-300 rounded mb-4">
+                <option value="4">Pix</option>
+                <option value="3">Débito</option>
+                <option value="2">Crédito</option>
+                <option value="1">Dinheiro</option>
+            </select>
+            <button onclick="confirmarPagamento()"
+                class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded">Confirmar</button>
+        </div>
+    </div>
+
+
+
+    <footer class="bg-gray-800 text-white text-center py-2 mt-auto">
+        <p>Feito por Maycon Lemos</p>
+    </footer>
+
+    <script>
+        const baseUrl = "http://localhost:5000/api/"
+        let produtos = []
+        let carrinho = [];
+        let nomeCliente = "";
+
+
+        async function adicionarProduto() {
+            const nomeProduto = document.getElementById('produto-nome').value;
+            const precoProduto = parseFloat(document.getElementById('produto-preco').value);
+
+            if (!nomeProduto || isNaN(precoProduto) || precoProduto <= 0) {
+                alert('Por favor, preencha corretamente os campos!');
+                return;
+            }
+
+            const idProduto = produtos.length ? produtos[produtos.length - 1].id + 1 : 1;
+
+            const data = { id: idProduto, nome: nomeProduto, preco: precoProduto }
+            const response = await axios.post(baseUrl + 'produtos', data);
+
+            atualizarTabelaProdutos();
+            document.getElementById('produto-nome').value = '';
+            document.getElementById('produto-preco').value = '';
+        }
+
+        // Função para atualizar a tabela de produtos
+        async function atualizarTabelaProdutos() {
+            const tabelaProdutos = document.getElementById('tabela-produtos');
+            tabelaProdutos.innerHTML = '';
+            const response = await axios.get(baseUrl + 'produtos');
+            produtos = response.data
+            produtos.forEach(produto => {
+                const row = tabelaProdutos.insertRow();
+                row.innerHTML = `
+                    <td>${produto.id}</td>
+                    <td>${produto.nome}</td>
+                    <td>R$ ${produto.preco.toFixed(2)}</td>
+                    <td>
+                       
+                        <button class="bg-red-500 hover:bg-red-600 text-white py-1 px-2 rounded" onclick="excluirProduto(${produto.id})">Excluir</button>
+                    </td>
+                `;
+            });
+        }
+
+        async function excluirProduto(id) {
+
+
+            response = await axios.delete(baseUrl + 'produtos/' + id)
+            atualizarTabelaProdutos();
+
+        }
+
+
+        function adicionarProdutoCarrinho() {
+            const entrada = document.getElementById('produto-id-nome').value;
+            if (!entrada) {
+                alert('Digite um nome ou ID de produto!');
+                return;
+            }
+
+            let produtoEncontrado = null;
+            if (isNaN(entrada)) {
+                produtoEncontrado = produtos.find(produto => produto.nome.toLowerCase() === entrada.toLowerCase());
+            } else {
+                produtoEncontrado = produtos.find(produto => produto.id === parseInt(entrada));
+            }
+
+            if (!produtoEncontrado) {
+                alert('Produto não encontrado!');
+                return;
+            }
+
+            const produtoNoCarrinho = carrinho.find(item => item.id === produtoEncontrado.id);
+            if (produtoNoCarrinho) {
+                produtoNoCarrinho.quantidade++;
+            } else {
+                carrinho.push({ ...produtoEncontrado, quantidade: 1 });
+            }
+
+            atualizarTabelaCarrinho();
+            document.getElementById('produto-id-nome').value = '';
+        }
+
+        function atualizarTabelaCarrinho() {
+            const tabelaCarrinho = document.getElementById('tabela-carrinho');
+            tabelaCarrinho.innerHTML = '';
+            let total = 0;
+            carrinho.forEach(item => {
+                const subtotal = item.preco * item.quantidade;
+                total += subtotal;
+                const row = tabelaCarrinho.insertRow();
+                row.innerHTML = `
+                    <td>${item.nome}</td>
+                    <td>${item.quantidade}</td>
+                    <td>R$ ${subtotal.toFixed(2)}</td>
+                `;
+            });
+            document.getElementById('total').innerText = total.toFixed(2);
+        }
+
+        function finalizarVenda() {
+            if (carrinho.length === 0) {
+                alert('O carrinho está vazio!');
+                return;
+            }
+
+            const clienteNome = prompt('Digite o nome do cliente:');
+            if (!clienteNome) {
+                alert('Por favor, digite o nome do cliente!');
+                return;
+            }
+
+            nomeCliente = clienteNome;
+            document.getElementById('modal-finalizar').classList.remove('hidden');
+        }
+
+
+        async function criarCliente(nome) {
+            const response = await axios.post(baseUrl + "clientes", data = {
+                nome
+            })
+            return response?.data
+        }
+
+        async function confirmarPagamento() {
+            const formaPagamento = document.getElementById('pagamento').value;
+            const tempoAtual = new Date().toLocaleString();
+            const cliente = await criarCliente(nomeCliente)
+
+
+            let pedidos = []
+            if (cliente.id) {
+                carrinho.forEach(item => {
+                    pedidos.push({
+                        produtoId: item.id,
+                        quantidade: pedidos.length + 1,
+                    })
+
+                });
+
+                data = {
+                    clienteId: cliente.id,
+                    dataVenda: new Date(),
+                    itensVenda: pedidos,
+                    formaPagamento
+                }
+
+                axios.post(baseUrl + 'vendas', data)
+
+            }
+
+            atualizarTabelaPedidos();
+            limparCarrinho();
+            document.getElementById('modal-finalizar').classList.add('hidden');
+        }
+
+        function limparCarrinho() {
+            carrinho = [];
+            atualizarTabelaCarrinho();
+        }
+
+        async function getPedidosService() {
+            return await axios.get(baseUrl + 'vendas')
+
+        }
+
+        async function putPedidosService(pedido) {
+            await axios.put(baseUrl + 'vendas/' + id, {
+                data: { ...pedido, status: 1 }
+            })
+
+        }
+
+
+
+        async function atualizarTabelaPedidos() {
+            const pedidos = await getPedidosService();
+            console.log(pedidos)
+            const tabelaPedidos = document.getElementById('tabela-pedidos');
+            tabelaPedidos.innerHTML = ''; // Limpa os cards existentes
+            pedidos.data.forEach(pedido => {
+                const card = document.createElement('div');
+                card.classList.add(
+                    'bg-white',
+                    'shadow',
+                    'rounded-lg',
+                    'p-4',
+                    'border',
+                    'border-gray-200',
+                    'flex',
+                    'flex-col',
+                    'justify-between'
+                );
+
+                card.innerHTML = `
+                    <h3 class="text-lg font-semibold">Pedido #${pedido.id} - ${pedido.status}</h3>
+                    <p><strong>Cliente:</strong> ${pedido.clienteId}</p>
+                    <p><strong>Total:</strong> R$ ${pedido.total.toFixed(2)}</p>
+                    <p><strong>Forma de Pagamento:</strong> ${pedido.formaPagamento}</p>
+                    <p><strong>Tempo:</strong> ${new Date(pedido.dataVenda).toLocaleString()}</p>
+
+                    <div class="mt-2">
+                    <h4 class="text-md font-semibold">Produtos:</h4>
+                    <ul class="produto-lista"></ul>
+                    </div>
+                    <button class="mt-4 bg-green-500 hover:bg-green-600 text-white py-1 px-2 rounded"
+                        onclick="putPedidosService(${pedido})">
+                        Entregar Pedido
+                    </button>
+                `;
+
+                // Referência para a lista de produtos
+                const listaProdutos = card.querySelector('.produto-lista');
+
+                pedido.itensVenda.forEach(produto => {
+                    const itemProduto = document.createElement('li');
+                    itemProduto.classList.add('mt-1');
+                    itemProduto.innerHTML = `
+                    <strong>${produto.nome}</strong> - 
+                    Qtd: ${produto.quantidade}, 
+                    Subtotal: R$ ${produto.preco.toFixed(2)}
+                `;
+                    listaProdutos.appendChild(itemProduto);
+                });
+
+                tabelaPedidos.appendChild(card);
+            });
+        }
+
+
+        // async function atualizarStatusPedidos() {
+        //     const pedidos = await getPedidosService()
+        //     const agora = new Date(); // Obtém a data atual
+
+        //     pedidos.forEach((pedido) => {
+        //         const row = document.querySelector(`#tabela-pedidos tr[data-id='${pedido.id.toString()}']`);
+
+        //         if (row) {
+        //             // Extrai a parte da hora (HH:mm:ss) de pedido.tempo
+        //             const horaFormatada = pedido.tempo.split(', ')[1];  // "HH:mm:ss"
+        //             const [horas, minutos, segundos] = horaFormatada.split(':').map(Number);
+
+        //             // Verifica se os valores extraídos são válidos
+        //             if (isNaN(horas) || isNaN(minutos) || isNaN(segundos)) {
+        //                 console.error('Tempo inválido:', pedido.tempo);
+        //                 return;
+        //             }
+
+        //             const tempoPedido = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), horas, minutos, segundos);
+        //             console.log(tempoPedido, agora);
+
+        //             // Calcula a diferença de tempo em minutos
+        //             const diffMinutes = Math.floor((agora - tempoPedido) / 1000); // diferença em minutos
+        //             console.log(diffMinutes);
+
+        //             // Remove as classes anteriores
+        //             row.classList.remove('bg-red-500', 'bg-yellow-500', 'bg-green-500');
+
+        //             // Aplica uma nova classe dependendo do tempo
+        //             if (diffMinutes < 10) {
+        //                 row.classList.add('bg-green-500'); // Menos de 10 minutos: verde
+        //             } else if (diffMinutes < 15) {
+        //                 row.classList.add('bg-yellow-500'); // Entre 10 e 15 minutos: amarelo
+        //             } else {
+        //                 row.classList.add('bg-red-500'); // Mais de 15 minutos: vermelho
+        //             }
+        //         }
+        //     });
+        // }
+
+
+
+        function mostrarProdutos() {
+            document.getElementById('pedidos').classList.add('hidden');
+            document.getElementById('produtos').classList.remove('hidden');
+            document.getElementById('carrinho').classList.add('hidden');
+
+        }
+
+        function mostrarCarrinho() {
+            document.getElementById('pedidos').classList.add('hidden');
+            document.getElementById('produtos').classList.add('hidden');
+            document.getElementById('carrinho').classList.remove('hidden');
+
+        }
+
+        function mostrarPedidos() {
+            document.getElementById('pedidos').classList.remove('hidden');
+            document.getElementById('produtos').classList.add('hidden');
+            document.getElementById('carrinho').classList.add('hidden');
+
+        }
+
+        function verificarEnter(event) {
+            if (event.key === 'Enter') {
+                adicionarProdutoCarrinho();
+            }
+        }
+
+
+        atualizarTabelaPedidos()
+
+
+
+
+        atualizarTabelaProdutos();
+    </script>
+</body>
+
+</html>
