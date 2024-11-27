@@ -16,7 +16,7 @@ namespace Aplicacao.Services
             _mapper = mapper;
         }
 
-        public async Task<Cliente> AddAsync(ClienteDTO clienteDTO)
+        public async Task<IResult<Cliente>> AddAsync(ClienteDTO clienteDTO)
         {
             var cliente = _mapper.Map<Cliente>(clienteDTO);
             return await _clienteRepository.AddAsync(cliente);
@@ -44,5 +44,6 @@ namespace Aplicacao.Services
             var cliente = _mapper.Map<Cliente>(clienteDTO);
             await _clienteRepository.UpdateAsync(cliente);
         }
+
     }
 }

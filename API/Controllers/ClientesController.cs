@@ -1,5 +1,6 @@
 ﻿using Aplicacao.DTO;
 using Aplicacao.Interfaces;
+using Dominio.Entities;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers
@@ -44,9 +45,10 @@ namespace Api.Controllers
                 return BadRequest();
             }
 
-            var cliente = await _clienteService.AddAsync(clienteDto);
+            IResult<Cliente> cliente = await _clienteService.AddAsync(clienteDto);
 
-            return CreatedAtAction(nameof(Get), new { id = cliente.Id }, cliente);
+            return CreatedAtAction(nameof(Get), new { id = cliente.Data.Id }, cliente.Data);
+
         }
 
         // PUT: api/Clientes/5

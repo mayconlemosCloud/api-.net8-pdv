@@ -1,15 +1,9 @@
-﻿using Aplicacao.DTO;
-using Aplicacao.Interfaces;
+﻿using Aplicacao.Interfaces;
 using Dominio.Entities;
 using Dominio.Enum;
 using Infraestrutura.Data;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Infraestrutura.Repositories
 {
@@ -58,14 +52,14 @@ namespace Infraestrutura.Repositories
                          Preco = i.Produto.Preco * i.Quantidade
                      }).ToList(),
 
-                  Total = venda.ItensVenda.Sum(i => i.Produto.Preco * i.Quantidade)
+                     Total = venda.ItensVenda.Sum(i => i.Produto.Preco * i.Quantidade)
 
 
                  });
 
-        Debug.WriteLine(query.ToQueryString());
+            Debug.WriteLine(query.ToQueryString());
 
-        return await query.ToListAsync();
+            return await query.ToListAsync();
 
         }
 

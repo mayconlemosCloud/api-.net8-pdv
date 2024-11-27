@@ -1,5 +1,8 @@
 ﻿using Aplicacao.Interfaces;
+using Aplicacao.Result;
 using Aplicacao.Services;
+using Dominio.Entities;
+using Dominio.Validators;
 using Infraestrutura.Repositories;
 
 namespace API.Configuration
@@ -20,6 +23,12 @@ namespace API.Configuration
             services.AddScoped<IClienteRepository, ClienteRepository>();
             services.AddScoped<IVendaRepository, VendaRepository>();
             services.AddScoped<IItemVendaRepository, ItemVendaRepository>();
+        }
+
+        public static void AddValidators(this IServiceCollection services)
+        {
+            services.AddScoped<ClienteValidator>();
+            services.AddScoped<IResult<Cliente>, Result<Cliente>>();
         }
     }
 }

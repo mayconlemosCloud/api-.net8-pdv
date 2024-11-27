@@ -43,7 +43,7 @@ builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices();
-
+builder.Services.AddValidators();
 
 
 builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite(
@@ -56,7 +56,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowSpecificOrigin", policy =>
     {
         policy.AllowAnyOrigin()
-              .AllowAnyMethod()  
+              .AllowAnyMethod()
               .AllowAnyHeader();
     });
 });
